@@ -6,16 +6,20 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-// Temporary mock storage directory on the SD card
+// Storage directory which points to the SSD drive mounted at /mnt/gobox_storage
 const StorageDir = "/mnt/gobox_storage"
 
 //FileAsset holds metadata for server-side template rendering
 type FileAsset struct {
 	Name	string
+	// url-safe version of the name for use in links (handles spaces, etc.)
+	URLName string
 	SizeKB  int64
 }
 
@@ -28,6 +32,7 @@ func main() {
 	// direct routes for the webapp
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/upload", handleUpload)
+	http.HandleFunc("/files/", handleFile)
 
 	fmt.Println("GoBox server up on http://localhost:8080")
 
@@ -65,6 +70,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 		assets = append(assets, FileAsset {
 			Name: entry.Name(),
+			// escape the name so links work even with spaces or odd characters
+			URLName: url.PathEscape(entry.Name()),
 			SizeKB: info.Size() / 1024,
 		})
 	}
@@ -78,6 +85,31 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 	// 3, inject the dataset directly into the hypermedia component
 	tmpl.Execute(w, assets)
+}
+
+// handleFile serves a single stored file. by default it streams the file inline
+// so the browser can preview/play it, but ?download=1 forces a save-to-disk instead.
+func handleFile(w http.ResponseWriter, r *http.Request) {
+	// 1. pull the filename out of the path. filepath.Base strips any directory
+	// parts so a request can't wander outside the storage dir.
+	name := filepath.Base(strings.TrimPrefix(r.URL.Path, "/files/"))
+
+	if name == "" || name == "." {
+		http.NotFound(w, r)
+		return
+	}
+
+	path := filepath.Join(StorageDir, name)
+
+	// 2. if the download flag is set, tell the browser to save rather than render
+	if r.URL.Query().Get("download") == "1" {
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name))
+	}
+
+	// 3. ServeFile does the heavy lifting: it streams the bytes, sniffs the
+	// content type, returns a 404 if missing, and crucially honors HTTP range
+	// requests so videos can be scrubbed/seeked without downloading the whole file.
+	http.ServeFile(w, r, path)
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -137,12 +169,19 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	
 		log.Printf("Successfully archived: %s (%d bytes)", part.FileName(), written)
 			
-		// 4. Return an HTMX fragment to dynamically update the file list
+		// 4. Return an HTMX fragment to dynamically update the file list.
+		// keep this markup in sync with the {{range}} block in index.html so
+		// freshly uploaded files are immediately clickable and downloadable.
 		w.Header().Set("Content-Type", "text/html")
+		// escape the name for the links; the raw name is fine for display text
+		urlName := url.PathEscape(part.FileName())
 		fmt.Fprintf(w, `
 		    <li class="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-		        <span class="truncate font-medium text-stone-200">%s</span>
-		        <span class="ml-4 shrink-0 text-xs text-stone-500">%d KB</span>
-		    </li>`, part.FileName(), written/1024)
+		        <a href="/files/%s" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">%s</a>
+		        <div class="ml-4 flex shrink-0 items-center gap-3">
+		            <span class="text-xs text-stone-500">%d KB</span>
+		            <a href="/files/%s?download=1" class="text-xs font-medium text-amber-400 hover:text-amber-300">Download</a>
+		        </div>
+		    </li>`, urlName, part.FileName(), written/1024, urlName)
 	}
 }

@@ -79,8 +79,11 @@
             <ul id="file-list" class="mt-4 space-y-2 max-h-[420px] overflow-y-auto pr-1 nice-scroll">
                 {{range .}}
                 <li class="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-                    <span class="truncate font-medium text-stone-200">{{.Name}}</span>
-                    <span class="ml-4 shrink-0 text-xs text-stone-500">{{.SizeKB}} KB</span>
+                    <a href="/files/{{.URLName}}" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">{{.Name}}</a>
+                    <div class="ml-4 flex shrink-0 items-center gap-3">
+                        <span class="text-xs text-stone-500">{{.SizeKB}} KB</span>
+                        <a href="/files/{{.URLName}}?download=1" class="text-xs font-medium text-amber-400 hover:text-amber-300">Download</a>
+                    </div>
                 </li>
                 {{else}}
                 <li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">
