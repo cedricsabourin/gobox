@@ -87,8 +87,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, assets)
 }
 
-// handleFile serves a single stored file. by default it streams the file inline
-// so the browser can preview/play it, but ?download=1 forces a save-to-disk instead.
+// handleFile serves a single stored file on GET (inline preview, or a forced
+// save with ?download=1) and removes it on DELETE.
 func handleFile(w http.ResponseWriter, r *http.Request) {
 	// 1. pull the filename out of the path. filepath.Base strips any directory
 	// parts so a request can't wander outside the storage dir.
@@ -101,15 +101,37 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 
 	path := filepath.Join(StorageDir, name)
 
-	// 2. if the download flag is set, tell the browser to save rather than render
-	if r.URL.Query().Get("download") == "1" {
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name))
-	}
+	switch r.Method {
+	case http.MethodDelete:
+		// 2. remove the file from disk. report 404 if it was already gone,
+		// otherwise treat it as a server-side failure.
+		if err := os.Remove(path); err != nil {
+			if os.IsNotExist(err) {
+				http.NotFound(w, r)
+			} else {
+				http.Error(w, "Failed to delete file", http.StatusInternalServerError)
+			}
+			return
+		}
 
-	// 3. ServeFile does the heavy lifting: it streams the bytes, sniffs the
-	// content type, returns a 404 if missing, and crucially honors HTTP range
-	// requests so videos can be scrubbed/seeked without downloading the whole file.
-	http.ServeFile(w, r, path)
+		// 3. respond with an empty 200. the empty body is what tells htmx to
+		// swap the list row out (replacing it with nothing).
+		w.WriteHeader(http.StatusOK)
+
+	case http.MethodGet:
+		// 2. if the download flag is set, tell the browser to save rather than render
+		if r.URL.Query().Get("download") == "1" {
+			w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", name))
+		}
+
+		// 3. ServeFile does the heavy lifting: it streams the bytes, sniffs the
+		// content type, returns a 404 if missing, and crucially honors HTTP range
+		// requests so videos can be scrubbed/seeked without downloading the whole file.
+		http.ServeFile(w, r, path)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +203,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		        <div class="ml-4 flex shrink-0 items-center gap-3">
 		            <span class="text-xs text-stone-500">%d KB</span>
 		            <a href="/files/%s?download=1" class="text-xs font-medium text-amber-400 hover:text-amber-300">Download</a>
+		            <button hx-delete="/files/%s"
+		                    hx-target="closest li"
+		                    hx-swap="outerHTML"
+		                    hx-confirm="Delete %s?"
+		                    class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
 		        </div>
-		    </li>`, urlName, part.FileName(), written/1024, urlName)
+		    </li>`, urlName, part.FileName(), written/1024, urlName, urlName, part.FileName())
 	}
 }
