@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoBox Storage Node</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-[#0b0c0e] text-[#e2e4e9] min-h-screen flex flex-col justify-between antialiased selection:bg-zinc-800 selection:text-zinc-100">
+
+    <header class="w-full border-b border-zinc-800/80 bg-[#0f1115]/50 backdrop-blur-md px-6 py-4">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="mono font-semibold text-sm tracking-wider text-zinc-400">GOBOX_NODE // 01</span>
+                <span class="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20">Active</span>
+            </div>
+            <div class="text-xs text-zinc-500 mono">Storage Target: Linux ext4</div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-2xl w-full mx-auto px-4 py-16 flex flex-col justify-center">
+        
+        <div class="bg-[#0f1115] border border-zinc-800 rounded-xl p-8 shadow-sm">
+            <div class="mb-6">
+                <h1 class="text-lg font-medium text-zinc-200">File Ingestion Pipeline</h1>
+                <p class="text-xs text-zinc-500 mt-1">Streams binary payloads directly to block storage via unbuffered multipart reader.</p>
+            </div>
+
+            <form hx-post="/upload" 
+                  hx-target="#upload-results" 
+                  hx-swap="beforeend" 
+                  enctype="multipart/form-data"
+                  class="space-y-6">
+                
+                <div class="relative group border border-dashed border-zinc-800 rounded-lg bg-[#14171c]/50 p-8 hover:bg-[#14171c] hover:border-zinc-700 transition-all duration-150">
+                    <input type="file" name="file" required id="file-input"
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                    
+                    <div class="flex flex-col items-center justify-center text-center space-y-2">
+                        <div class="p-2 bg-zinc-900 rounded-md border border-zinc-800 text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        </div>
+                        <p class="text-sm font-medium text-zinc-400 group-hover:text-zinc-300 transition-colors">Select target asset</p>
+                        <p class="text-xs text-zinc-600 mono" id="file-name-display">No file staged</p>
+                    </div>
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-zinc-200 hover:bg-white text-zinc-950 font-medium text-sm py-2.5 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-[#0f1115]">
+                    Execute Stream Transfer
+                </button>
+            </form>
+        </div>
+
+        <div class="mt-8 bg-[#0f1115] border border-zinc-800 rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4 border-b border-zinc-800 pb-3">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 mono">I/O Activity Feed</h2>
+                <span class="w-1.5 h-1.5 rounded-full bg-zinc-700 animate-pulse"></span>
+            </div>
+            
+            <ul id="upload-results" class="space-y-2 text-xs mono min-h-[80px] max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                <li class="text-zinc-600">// Awaiting initial transmission socket connection...</li>
+            </ul>
+        </div>
+
+    </main>
+
+    <footer class="w-full border-t border-zinc-800/60 bg-[#0f1115]/20 py-4 text-center">
+        <p class="text-[11px] text-zinc-600 mono">GoBox Storage Engine v1.0.0 - Architecture: Custom Byte Stream Pipeline</p>
+    </footer>
+
+    <script>
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : "No file staged";
+            document.getElementById('file-name-display').textContent = fileName;
+        });
+        
+        // auto-clear form input after an HTMX upload finishes so you can upload back-to-back easily
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.target.id === 'upload-results' && evt.detail.successful) {
+                document.querySelector('form').reset();
+                document.getElementById('file-name-display').textContent = "No file staged";
+            }
+        });
+    </script>
+</body>
+</html>

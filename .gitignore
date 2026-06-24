@@ -1,0 +1,11 @@
+data/
+
+gobox
+main
+*.exe
+*.so
+*.dylib
+
+.vscode/
+.DS_Store
+Thumbs.db
