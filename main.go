@@ -137,12 +137,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	
 		log.Printf("Successfully archived: %s (%d bytes)", part.FileName(), written)
 			
-		// 4. Return an HTMX fragment to dynamically update the UI list
+		// 4. Return an HTMX fragment to dynamically update the file list
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, `
-		    <div class="flex items-center justify-between p-3 bg-zinc-900 ...">
-		        <span class="truncate text-zinc-300 font-medium">%s</span>
-		        <span class="text-zinc-500 text-[11px] shrink-0 ml-4">%d KB</span>
-		    </div>`, part.FileName(), written/1024)
+		    <li class="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
+		        <span class="truncate font-medium text-stone-200">%s</span>
+		        <span class="ml-4 shrink-0 text-xs text-stone-500">%d KB</span>
+		    </li>`, part.FileName(), written/1024)
 	}
 }
