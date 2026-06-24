@@ -11,7 +11,7 @@ import (
 )
 
 // Temporary mock storage directory on the SD card
-const StorageDir = "./data"
+const StorageDir = "/mnt/gobox_storage"
 
 //FileAsset holds metadata for server-side template rendering
 type FileAsset struct {
