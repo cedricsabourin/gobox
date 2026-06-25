@@ -43,7 +43,7 @@
             <h1 class="text-2xl font-semibold tracking-tight text-stone-100">Upload</h1>
             <p class="mt-1 text-sm text-stone-400">Add photos and videos to your library. Big files are fine.</p>
 
-            <form hx-post="/upload"
+            <form hx-post="/upload?path={{.URLPath}}"
                   hx-target="#file-list"
                   hx-swap="afterbegin"
                   enctype="multipart/form-data"
@@ -72,32 +72,66 @@
         </section>
 
         <section>
-            <div class="flex items-center justify-between border-b border-line pb-3">
-                <h2 class="text-lg font-semibold tracking-tight text-stone-100">Your files</h2>
+            <div class="flex items-center justify-between gap-3 border-b border-line pb-3">
+                <nav class="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-stone-400">
+                    {{range $i, $c := .Crumbs}}
+                        {{if $i}}<span class="text-stone-600">/</span>{{end}}
+                        <a href="/?path={{$c.URLPath}}" class="truncate hover:text-amber-400">{{$c.Name}}</a>
+                    {{end}}
+                </nav>
+                <button hx-post="/mkdir?path={{.URLPath}}"
+                        hx-prompt="New folder name:"
+                        class="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-amber-500/40 hover:text-amber-400">New folder</button>
             </div>
 
             <ul id="file-list" class="mt-4 space-y-2 max-h-[420px] overflow-y-auto pr-1 nice-scroll">
-                {{range .}}
-                <li class="flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-                    <a href="/files/{{.URLName}}" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">{{.Name}}</a>
+                {{range .Folders}}
+                <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
+                    <a href="/?path={{.URLPath}}" class="flex min-w-0 items-center gap-2 font-medium text-amber-300 hover:text-amber-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
+                        <span class="truncate">{{.Name}}</span>
+                    </a>
                     <div class="ml-4 flex shrink-0 items-center gap-3">
-                        <span class="text-xs text-stone-500">{{.SizeKB}} KB</span>
-                        <a href="/files/{{.URLName}}?download=1" class="text-xs font-medium text-green-400 hover:text-lime-300">Download</a>
-                        <button hx-post="/rename/{{.URLName}}"
+                        <button hx-post="/rename/{{.URLPath}}"
                                 hx-prompt="New name for {{.Name}}:"
                                 hx-target="closest li"
                                 hx-swap="outerHTML"
                                 class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
-                        <button hx-delete="/files/{{.URLName}}"
+                        <button hx-delete="/folder/{{.URLPath}}"
+                                hx-target="closest li"
+                                hx-swap="outerHTML"
+                                hx-confirm="Delete folder {{.Name}} and everything inside it?"
+                                class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
+                    </div>
+                </li>
+                {{end}}
+                {{range .Files}}
+                <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
+                    <a href="/files/{{.URLPath}}" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">{{.Name}}</a>
+                    <div class="ml-4 flex shrink-0 items-center gap-3">
+                        <span class="text-xs text-stone-500">{{.SizeKB}} KB</span>
+                        <a href="/files/{{.URLPath}}?download=1" class="text-xs font-medium text-green-400 hover:text-lime-300">Download</a>
+                        <button hx-post="/move/{{.URLPath}}"
+                                hx-prompt="Move to folder (e.g. photos/2024):"
+                                hx-target="closest li"
+                                hx-swap="outerHTML"
+                                class="text-xs font-medium text-stone-500 hover:text-sky-400">Move</button>
+                        <button hx-post="/rename/{{.URLPath}}"
+                                hx-prompt="New name for {{.Name}}:"
+                                hx-target="closest li"
+                                hx-swap="outerHTML"
+                                class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
+                        <button hx-delete="/files/{{.URLPath}}"
                                 hx-target="closest li"
                                 hx-swap="outerHTML"
                                 hx-confirm="Delete {{.Name}}?"
                                 class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
                     </div>
                 </li>
-                {{else}}
+                {{end}}
+                {{if and (not .Folders) (not .Files)}}
                 <li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">
-                    Nothing here yet — upload your first photo or video above.
+                    This folder is empty — upload a file or create a folder above.
                 </li>
                 {{end}}
             </ul>
@@ -122,24 +156,32 @@
             }
         });
 
-        // after a successful upload, remove the empty-state row and reset the form
+        // keep the empty-state placeholder in sync: show it only when the folder
+        // has no folders and no files left, otherwise make sure it's gone
+        function refreshEmptyState() {
+            const list = document.getElementById('file-list');
+            if (!list) return;
+            const hasItems = list.querySelectorAll('.entry-row').length > 0;
+            const empty = document.getElementById('empty-state');
+            if (hasItems && empty) {
+                empty.remove();
+            } else if (!hasItems && !empty) {
+                list.insertAdjacentHTML('beforeend', '<li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">This folder is empty — upload a file or create a folder above.</li>');
+            }
+        }
+
         document.body.addEventListener('htmx:afterRequest', function (evt) {
-            if (evt.detail.target.id === 'file-list' && evt.detail.successful) {
-                const empty = document.getElementById('empty-state');
-                if (empty) empty.remove();
+            if (!evt.detail.successful) return;
+
+            // an upload swaps new rows into the list; reset the form afterwards
+            if (evt.detail.target.id === 'file-list') {
                 document.querySelector('form').reset();
                 document.getElementById('file-name-display').textContent = "or click to browse your device";
             }
 
-            // after a successful delete, the row is already gone; if that was the
-            // last file, drop the empty-state placeholder back in
-            const wasDelete = evt.detail.requestConfig && evt.detail.requestConfig.verb === 'delete';
-            if (wasDelete && evt.detail.successful) {
-                const list = document.getElementById('file-list');
-                if (list && list.querySelectorAll('li').length === 0) {
-                    list.innerHTML = '<li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">Nothing here yet — upload your first photo or video above.</li>';
-                }
-            }
+            // rows may have been added (upload) or removed (delete/move), so
+            // re-check whether the empty-state should be shown
+            refreshEmptyState();
         });
     </script>
 </body>
