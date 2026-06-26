@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // Storage directory which points to the SSD drive mounted at /mnt/gobox_storage
@@ -23,13 +24,24 @@ type Entry struct {
 	RelPath string
 	// escapePath(RelPath) - safe to drop straight into a link
 	URLPath string
-	SizeKB  int64
+	Size    int64
+	SizeLabel string
 }
 
 // Crumb is one clickable segment of the breadcrumb trail.
 type Crumb struct {
 	Name	string
 	URLPath string
+}
+
+// StorageInfo holds SSD usage numbers for the sidebar display.
+type StorageInfo struct {
+	UsedGB  float64
+	TotalGB float64
+	UsedPct int
+
+	// false if we couldn't read filesystem stats (e.g. drive unmounted)
+	OK bool
 }
 
 // PageData is everything the index template needs to render one folder view.
@@ -41,6 +53,7 @@ type PageData struct {
 	Crumbs  []Crumb
 	Folders []Entry
 	Files   []Entry
+	Storage StorageInfo
 }
 
 func main() {
@@ -63,6 +76,24 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// function that formats the size into GB or MB or KB depending on the size
+func formatSize(bytes int64) string {
+	const (
+		kb = 1024
+		mb = kb * 1024
+		gb = mb * 1024
+	)
+
+	switch {
+    case bytes >= gb:
+        return fmt.Sprintf("%.1f GB", float64(bytes)/float64(gb))
+    case bytes >= mb:
+        return fmt.Sprintf("%.1f MB", float64(bytes)/float64(mb))
+    default:
+        return fmt.Sprintf("%d KB", bytes/kb)
+    }
 }
 
 // safePath resolves a user-supplied relative path inside StorageDir. prefixing a
@@ -113,6 +144,33 @@ func buildCrumbs(clean string) []Crumb {
 		})
 	}
 	return crumbs
+}
+
+// diskUsage reads filesystem stats for the SSD mount via Statfs. it reports whole-drive usage
+func diskUsage(path string) StorageInfo {
+	var stat syscall.Statfs_t
+
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return StorageInfo{}
+	}
+
+	bsize := uint64(stat.Bsize)
+	total := stat.Blocks * bsize
+	avail := stat.Bavail * bsize
+
+	if total == 0 {
+		return StorageInfo{}
+	}
+
+	used := total - avail
+	const gb = 1024 * 1024 * 1024
+
+	return StorageInfo{
+		UsedGB:  float64(used) / gb,
+		TotalGB: float64(total) / gb,
+		UsedPct: int(used * 100 / total),
+		OK:      true,
+	}
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +226,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			Name:    entry.Name(),
 			RelPath: rel,
 			URLPath: escapePath(rel),
-			SizeKB:  meta.Size() / 1024,
+			Size:  meta.Size(),
+			SizeLabel: formatSize(meta.Size()),
 		})
 	}
 
@@ -179,6 +238,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		Crumbs:  buildCrumbs(clean),
 		Folders: folders,
 		Files:   files,
+		Storage: diskUsage(StorageDir),
 	}
 
 	tmpl, err := template.ParseFiles("templates/index.html")
@@ -292,11 +352,11 @@ func handleRename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var sizeKB int64
+	var sizeBytes int64
 	if err == nil {
-		sizeKB = info.Size() / 1024
+		sizeBytes = info.Size()
 	}
-	fmt.Fprint(w, fileRowHTML(newRel, newName, sizeKB))
+	fmt.Fprint(w, fileRowHTML(newRel, newName, sizeBytes))
 }
 
 // handleMkdir creates a new folder inside the current one. the folder name comes
@@ -407,12 +467,12 @@ func handleMove(w http.ResponseWriter, r *http.Request) {
 	// 3. if the destination is the file's current folder nothing moves, so just
 	// return the unchanged row and htmx leaves it in place.
 	if filepath.Dir(srcFull) == destDir {
-		var sizeKB int64
+		var sizeBytes int64
 		if fi, err := os.Stat(srcFull); err == nil {
-			sizeKB = fi.Size() / 1024
+			sizeBytes = fi.Size()
 		}
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, fileRowHTML(srcClean, name, sizeKB))
+		fmt.Fprint(w, fileRowHTML(srcClean, name, sizeBytes))
 		return
 	}
 
@@ -442,14 +502,14 @@ func handleMove(w http.ResponseWriter, r *http.Request) {
 // by the upload, rename, and move responses so the row only has to be maintained
 // in one place (the {{range .Files}} block in index.html mirrors it for the
 // initial page load).
-func fileRowHTML(relPath, name string, sizeKB int64) string {
+func fileRowHTML(relPath, name string, sizeBytes int64) string {
 	// escape the path for the links; the raw name is fine as display text
 	esc := escapePath(relPath)
 	return fmt.Sprintf(`
 		    <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
 		        <a href="/files/%s" target="_blank" class="truncate font-medium text-stone-800 hover:text-stone-950">%s</a>
 		        <div class="ml-4 flex shrink-0 items-center gap-3">
-		            <span class="text-xs text-stone-500">%d KB</span>
+		            <span class="text-xs text-stone-500">%s</span>
 		            <a href="/files/%s?download=1" class="text-xs font-medium text-green-600 hover:text-green-700">Download</a>
 		            <button hx-post="/move/%s"
 		                    hx-prompt="Move to folder (e.g. photos/2024):"
@@ -467,7 +527,7 @@ func fileRowHTML(relPath, name string, sizeKB int64) string {
 		                    hx-confirm="Delete %s?"
 		                    class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
 		        </div>
-		    </li>`, esc, name, sizeKB, esc, esc, esc, name, esc, name)
+		    </li>`, esc, name, formatSize(sizeBytes), esc, esc, esc, name, esc, name)
 }
 
 // folderRowHTML renders the list-item markup for a folder: the name navigates
@@ -564,6 +624,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		// 5. return the row for the new file (the shared helper keeps it identical
 		// to the rename/move responses), using its folder-aware relative path.
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, fileRowHTML(path.Join(clean, name), name, written/1024))
+		fmt.Fprint(w, fileRowHTML(path.Join(clean, name), name, written))
 	}
 }
