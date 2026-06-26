@@ -88,57 +88,60 @@
                 </nav>
 
                 <div class="rounded-md border border-line bg-panel overflow-hidden">
-                    <ul id="file-list" class="max-h-[calc(100vh-200px)] overflow-y-auto nice-scroll">
+                    <div id="file-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 p-3 max-h-[calc(100vh-200px)] overflow-y-auto nice-scroll">
                         {{range .Folders}}
-                        <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
-                            <a href="/?path={{.URLPath}}" class="flex min-w-0 items-center gap-2 font-medium text-stone-800 hover:text-stone-950">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0 text-stone-500"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
-                                <span class="truncate">{{.Name}}</span>
+                        <div class="entry-row group relative flex flex-col rounded-md border border-line bg-panel overflow-hidden hover:border-stone-400">
+                            <a href="/?path={{.URLPath}}" class="block">
+                                <div class="aspect-square flex items-center justify-center bg-stone-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-14 w-14 text-stone-400"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
+                                </div>
                             </a>
-                            <div class="ml-4 flex shrink-0 items-center gap-3">
-                                <button hx-post="/rename/{{.URLPath}}"
-                                        hx-prompt="New name for {{.Name}}:"
-                                        hx-target="closest li"
-                                        hx-swap="outerHTML"
-                                        class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
-                                <button hx-delete="/folder/{{.URLPath}}"
-                                        hx-target="closest li"
-                                        hx-swap="outerHTML"
-                                        hx-confirm="Delete folder {{.Name}} and everything inside it?"
-                                        class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+                            <div class="p-2 min-h-[3.25rem]">
+                                <p class="line-clamp-2 text-xs font-medium text-stone-800 text-center break-words leading-snug">{{.Name}}</p>
                             </div>
-                        </li>
+                            <details class="absolute top-1.5 right-1.5">
+                                <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-md bg-panel/90 text-stone-600 shadow-sm ring-1 ring-line hover:bg-stone-100 [&::-webkit-details-marker]:hidden">⋯</summary>
+                                <div class="absolute right-0 z-10 mt-1 min-w-[7rem] rounded-md border border-line bg-panel py-1 shadow-lg">
+                                    <button hx-post="/rename/{{.URLPath}}" hx-prompt="New name for {{.Name}}:" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Rename</button>
+                                    <button hx-delete="/folder/{{.URLPath}}" hx-target="closest .entry-row" hx-swap="outerHTML" hx-confirm="Delete folder {{.Name}} and everything inside it?" class="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-stone-50">Delete</button>
+                                </div>
+                            </details>
+                        </div>
                         {{end}}
                         {{range .Files}}
-                        <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
-                            <a href="/files/{{.URLPath}}" target="_blank" class="truncate font-medium text-stone-800 hover:text-stone-950">{{.Name}}</a>
-                            <div class="ml-4 flex shrink-0 items-center gap-3">
-                                <span class="text-xs text-stone-500">{{.SizeLabel}}</span>
-                                <a href="/files/{{.URLPath}}?download=1" class="text-xs font-medium text-green-600 hover:text-green-700">Download</a>
-                                <button hx-post="/move/{{.URLPath}}"
-                                        hx-prompt="Move to folder (e.g. photos/2024):"
-                                        hx-target="closest li"
-                                        hx-swap="outerHTML"
-                                        class="text-xs font-medium text-stone-500 hover:text-sky-600">Move</button>
-                                <button hx-post="/rename/{{.URLPath}}"
-                                        hx-prompt="New name for {{.Name}}:"
-                                        hx-target="closest li"
-                                        hx-swap="outerHTML"
-                                        class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
-                                <button hx-delete="/files/{{.URLPath}}"
-                                        hx-target="closest li"
-                                        hx-swap="outerHTML"
-                                        hx-confirm="Delete {{.Name}}?"
-                                        class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+                        <div class="entry-row group relative flex flex-col rounded-md border border-line bg-panel overflow-hidden hover:border-stone-400">
+                            <a href="/files/{{.URLPath}}" target="_blank" class="block">
+                                <div class="aspect-square flex items-center justify-center bg-stone-100">
+                                    {{if eq .Kind "image"}}
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>
+                                    {{else if eq .Kind "video"}}
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                    {{else}}
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                                    {{end}}
+                                </div>
+                            </a>
+                            <div class="p-2 min-h-[3.25rem]">
+                                <p class="line-clamp-2 text-xs font-medium text-stone-800 text-center break-words leading-snug">{{.Name}}</p>
+                                <p class="text-[10px] text-stone-500 text-center mt-0.5">{{.SizeLabel}}</p>
                             </div>
-                        </li>
+                            <details class="absolute top-1.5 right-1.5">
+                                <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-md bg-panel/90 text-stone-600 shadow-sm ring-1 ring-line hover:bg-stone-100 [&::-webkit-details-marker]:hidden">⋯</summary>
+                                <div class="absolute right-0 z-10 mt-1 min-w-[7rem] rounded-md border border-line bg-panel py-1 shadow-lg">
+                                    <a href="/files/{{.URLPath}}?download=1" class="block px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-50">Download</a>
+                                    <button hx-post="/move/{{.URLPath}}" hx-prompt="Move to folder (e.g. photos/2024):" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Move</button>
+                                    <button hx-post="/rename/{{.URLPath}}" hx-prompt="New name for {{.Name}}:" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Rename</button>
+                                    <button hx-delete="/files/{{.URLPath}}" hx-target="closest .entry-row" hx-swap="outerHTML" hx-confirm="Delete {{.Name}}?" class="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-stone-50">Delete</button>
+                                </div>
+                            </details>
+                        </div>
                         {{end}}
                         {{if and (not .Folders) (not .Files)}}
-                        <li id="empty-state" class="px-4 py-12 text-center text-sm text-stone-500">
+                        <div id="empty-state" class="col-span-full px-4 py-12 text-center text-sm text-stone-500">
                             Folder is empty
-                        </li>
+                        </div>
                         {{end}}
-                    </ul>
+                    </div>
                 </div>
             </section>
 
@@ -172,7 +175,7 @@
             if (hasItems && empty) {
                 empty.remove();
             } else if (!hasItems && !empty) {
-                list.insertAdjacentHTML('beforeend', '<li id="empty-state" class="px-4 py-12 text-center text-sm text-stone-500">Folder is empty</li>');
+                list.insertAdjacentHTML('beforeend', '<div id="empty-state" class="col-span-full px-4 py-12 text-center text-sm text-stone-500">Folder is empty</div>');
             }
         }
 

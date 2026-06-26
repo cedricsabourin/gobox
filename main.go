@@ -26,6 +26,8 @@ type Entry struct {
 	URLPath string
 	Size    int64
 	SizeLabel string
+	// folder, image, video, or file — drives which placeholder icon to show
+	Kind string
 }
 
 // Crumb is one clickable segment of the breadcrumb trail.
@@ -93,7 +95,34 @@ func formatSize(bytes int64) string {
         return fmt.Sprintf("%.1f MB", float64(bytes)/float64(mb))
     default:
         return fmt.Sprintf("%d KB", bytes/kb)
-    }
+	}
+}
+
+// fileKind guesses the media type from the extension so we can pick a placeholder
+// icon. real thumbnails come later; for now this is just visual grouping.
+func fileKind(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif":
+		return "image"
+	case ".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi":
+		return "video"
+	default:
+		return "file"
+	}
+}
+
+// iconPreviewHTML returns the big centered svg for a card's preview box.
+func iconPreviewHTML(kind string) string {
+	switch kind {
+	case "folder":
+		return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-14 w-14 text-stone-400"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>`
+	case "image":
+		return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" /></svg>`
+	case "video":
+		return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>`
+	default:
+		return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-14 w-14 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>`
+	}
 }
 
 // safePath resolves a user-supplied relative path inside StorageDir. prefixing a
@@ -212,6 +241,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 				Name:    entry.Name(),
 				RelPath: rel,
 				URLPath: escapePath(rel),
+				Kind:    "folder",
 			})
 			continue
 		}
@@ -226,8 +256,9 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			Name:    entry.Name(),
 			RelPath: rel,
 			URLPath: escapePath(rel),
-			Size:  meta.Size(),
+			Size:    meta.Size(),
 			SizeLabel: formatSize(meta.Size()),
+			Kind:    fileKind(entry.Name()),
 		})
 	}
 
@@ -348,7 +379,7 @@ func handleRename(w http.ResponseWriter, r *http.Request) {
 	info, err := os.Stat(newFull)
 
 	if err == nil && info.IsDir() {
-		fmt.Fprint(w, folderRowHTML(newRel, newName))
+		fmt.Fprint(w, folderCardHTML(newRel, newName))
 		return
 	}
 
@@ -356,7 +387,7 @@ func handleRename(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		sizeBytes = info.Size()
 	}
-	fmt.Fprint(w, fileRowHTML(newRel, newName, sizeBytes))
+	fmt.Fprint(w, fileCardHTML(newRel, newName, sizeBytes))
 }
 
 // handleMkdir creates a new folder inside the current one. the folder name comes
@@ -472,7 +503,7 @@ func handleMove(w http.ResponseWriter, r *http.Request) {
 			sizeBytes = fi.Size()
 		}
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, fileRowHTML(srcClean, name, sizeBytes))
+		fmt.Fprint(w, fileCardHTML(srcClean, name, sizeBytes))
 		return
 	}
 
@@ -498,62 +529,57 @@ func handleMove(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// fileRowHTML renders the list-item markup for a single stored file. it's shared
-// by the upload, rename, and move responses so the row only has to be maintained
-// in one place (the {{range .Files}} block in index.html mirrors it for the
-// initial page load).
-func fileRowHTML(relPath, name string, sizeBytes int64) string {
-	// escape the path for the links; the raw name is fine as display text
+// fileCardHTML renders a grid card for a single stored file. shared by upload,
+// rename, and move responses (the {{range .Files}} block in index.html mirrors it).
+func fileCardHTML(relPath, name string, sizeBytes int64) string {
 	esc := escapePath(relPath)
+	kind := fileKind(name)
+	icon := iconPreviewHTML(kind)
+	sizeLabel := formatSize(sizeBytes)
+
 	return fmt.Sprintf(`
-		    <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
-		        <a href="/files/%s" target="_blank" class="truncate font-medium text-stone-800 hover:text-stone-950">%s</a>
-		        <div class="ml-4 flex shrink-0 items-center gap-3">
-		            <span class="text-xs text-stone-500">%s</span>
-		            <a href="/files/%s?download=1" class="text-xs font-medium text-green-600 hover:text-green-700">Download</a>
-		            <button hx-post="/move/%s"
-		                    hx-prompt="Move to folder (e.g. photos/2024):"
-		                    hx-target="closest li"
-		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-sky-600">Move</button>
-		            <button hx-post="/rename/%s"
-		                    hx-prompt="New name for %s:"
-		                    hx-target="closest li"
-		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
-		            <button hx-delete="/files/%s"
-		                    hx-target="closest li"
-		                    hx-swap="outerHTML"
-		                    hx-confirm="Delete %s?"
-		                    class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+		    <div class="entry-row group relative flex flex-col rounded-md border border-line bg-panel overflow-hidden hover:border-stone-400">
+		        <a href="/files/%s" target="_blank" class="block">
+		            <div class="aspect-square flex items-center justify-center bg-stone-100">%s</div>
+		        </a>
+		        <div class="p-2 min-h-[3.25rem]">
+		            <p class="line-clamp-2 text-xs font-medium text-stone-800 text-center break-words leading-snug">%s</p>
+		            <p class="text-[10px] text-stone-500 text-center mt-0.5">%s</p>
 		        </div>
-		    </li>`, esc, name, formatSize(sizeBytes), esc, esc, esc, name, esc, name)
+		        <details class="absolute top-1.5 right-1.5">
+		            <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-md bg-panel/90 text-stone-600 shadow-sm ring-1 ring-line hover:bg-stone-100 [&::-webkit-details-marker]:hidden">⋯</summary>
+		            <div class="absolute right-0 z-10 mt-1 min-w-[7rem] rounded-md border border-line bg-panel py-1 shadow-lg">
+		                <a href="/files/%s?download=1" class="block px-3 py-1.5 text-xs text-stone-700 hover:bg-stone-50">Download</a>
+		                <button hx-post="/move/%s" hx-prompt="Move to folder (e.g. photos/2024):" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Move</button>
+		                <button hx-post="/rename/%s" hx-prompt="New name for %s:" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Rename</button>
+		                <button hx-delete="/files/%s" hx-target="closest .entry-row" hx-swap="outerHTML" hx-confirm="Delete %s?" class="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-stone-50">Delete</button>
+		            </div>
+		        </details>
+		    </div>`, esc, icon, name, sizeLabel, esc, esc, esc, name, esc, name)
 }
 
-// folderRowHTML renders the list-item markup for a folder: the name navigates
-// into it, while rename/delete act on the whole folder. the {{range .Folders}}
-// block in index.html mirrors this for the initial page load.
-func folderRowHTML(relPath, name string) string {
+// folderCardHTML renders a grid card for a folder. the {{range .Folders}} block
+// in index.html mirrors this for the initial page load.
+func folderCardHTML(relPath, name string) string {
 	esc := escapePath(relPath)
+	icon := iconPreviewHTML("folder")
+
 	return fmt.Sprintf(`
-		    <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
-		        <a href="/?path=%s" class="flex min-w-0 items-center gap-2 font-medium text-stone-800 hover:text-stone-950">
-		            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0 text-stone-500"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
-		            <span class="truncate">%s</span>
+		    <div class="entry-row group relative flex flex-col rounded-md border border-line bg-panel overflow-hidden hover:border-stone-400">
+		        <a href="/?path=%s" class="block">
+		            <div class="aspect-square flex items-center justify-center bg-stone-100">%s</div>
 		        </a>
-		        <div class="ml-4 flex shrink-0 items-center gap-3">
-		            <button hx-post="/rename/%s"
-		                    hx-prompt="New name for %s:"
-		                    hx-target="closest li"
-		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
-		            <button hx-delete="/folder/%s"
-		                    hx-target="closest li"
-		                    hx-swap="outerHTML"
-		                    hx-confirm="Delete folder %s and everything inside it?"
-		                    class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+		        <div class="p-2 min-h-[3.25rem]">
+		            <p class="line-clamp-2 text-xs font-medium text-stone-800 text-center break-words leading-snug">%s</p>
 		        </div>
-		    </li>`, esc, name, esc, name, esc, name)
+		        <details class="absolute top-1.5 right-1.5">
+		            <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center rounded-md bg-panel/90 text-stone-600 shadow-sm ring-1 ring-line hover:bg-stone-100 [&::-webkit-details-marker]:hidden">⋯</summary>
+		            <div class="absolute right-0 z-10 mt-1 min-w-[7rem] rounded-md border border-line bg-panel py-1 shadow-lg">
+		                <button hx-post="/rename/%s" hx-prompt="New name for %s:" hx-target="closest .entry-row" hx-swap="outerHTML" class="block w-full px-3 py-1.5 text-left text-xs text-stone-700 hover:bg-stone-50">Rename</button>
+		                <button hx-delete="/folder/%s" hx-target="closest .entry-row" hx-swap="outerHTML" hx-confirm="Delete folder %s and everything inside it?" class="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-stone-50">Delete</button>
+		            </div>
+		        </details>
+		    </div>`, esc, icon, name, esc, name, esc, name)
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -624,6 +650,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		// 5. return the row for the new file (the shared helper keeps it identical
 		// to the rename/move responses), using its folder-aware relative path.
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, fileRowHTML(path.Join(clean, name), name, written))
+		fmt.Fprint(w, fileCardHTML(path.Join(clean, name), name, written))
 	}
 }
