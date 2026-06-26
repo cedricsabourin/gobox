@@ -446,26 +446,26 @@ func fileRowHTML(relPath, name string, sizeKB int64) string {
 	// escape the path for the links; the raw name is fine as display text
 	esc := escapePath(relPath)
 	return fmt.Sprintf(`
-		    <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-		        <a href="/files/%s" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">%s</a>
+		    <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
+		        <a href="/files/%s" target="_blank" class="truncate font-medium text-stone-800 hover:text-stone-950">%s</a>
 		        <div class="ml-4 flex shrink-0 items-center gap-3">
 		            <span class="text-xs text-stone-500">%d KB</span>
-		            <a href="/files/%s?download=1" class="text-xs font-medium text-green-400 hover:text-lime-300">Download</a>
+		            <a href="/files/%s?download=1" class="text-xs font-medium text-green-600 hover:text-green-700">Download</a>
 		            <button hx-post="/move/%s"
 		                    hx-prompt="Move to folder (e.g. photos/2024):"
 		                    hx-target="closest li"
 		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-sky-400">Move</button>
+		                    class="text-xs font-medium text-stone-500 hover:text-sky-600">Move</button>
 		            <button hx-post="/rename/%s"
 		                    hx-prompt="New name for %s:"
 		                    hx-target="closest li"
 		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
+		                    class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
 		            <button hx-delete="/files/%s"
 		                    hx-target="closest li"
 		                    hx-swap="outerHTML"
 		                    hx-confirm="Delete %s?"
-		                    class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
+		                    class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
 		        </div>
 		    </li>`, esc, name, sizeKB, esc, esc, esc, name, esc, name)
 }
@@ -476,9 +476,9 @@ func fileRowHTML(relPath, name string, sizeKB int64) string {
 func folderRowHTML(relPath, name string) string {
 	esc := escapePath(relPath)
 	return fmt.Sprintf(`
-		    <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-		        <a href="/?path=%s" class="flex min-w-0 items-center gap-2 font-medium text-amber-300 hover:text-amber-200">
-		            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
+		    <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
+		        <a href="/?path=%s" class="flex min-w-0 items-center gap-2 font-medium text-stone-800 hover:text-stone-950">
+		            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0 text-stone-500"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
 		            <span class="truncate">%s</span>
 		        </a>
 		        <div class="ml-4 flex shrink-0 items-center gap-3">
@@ -486,12 +486,12 @@ func folderRowHTML(relPath, name string) string {
 		                    hx-prompt="New name for %s:"
 		                    hx-target="closest li"
 		                    hx-swap="outerHTML"
-		                    class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
+		                    class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
 		            <button hx-delete="/folder/%s"
 		                    hx-target="closest li"
 		                    hx-swap="outerHTML"
 		                    hx-confirm="Delete folder %s and everything inside it?"
-		                    class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
+		                    class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
 		        </div>
 		    </li>`, esc, name, esc, name, esc, name)
 }

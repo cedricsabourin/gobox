@@ -9,138 +9,134 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        /* warm dark palette */
-        :root { --bg: #16130f; --panel: #211c16; --line: #352d23; }
+        /* light grey palette - plain & utilitarian */
+        :root { --bg: #e8e8e8; --panel: #ffffff; --line: #d6d6d6; }
         .bg-app { background-color: var(--bg); }
         .bg-panel { background-color: var(--panel); }
         .border-line { border-color: var(--line); }
         /* tidy scrollbar for the file list */
         .nice-scroll::-webkit-scrollbar { width: 8px; }
         .nice-scroll::-webkit-scrollbar-track { background: transparent; }
-        .nice-scroll::-webkit-scrollbar-thumb { background: #4a4032; border-radius: 9999px; }
-        .nice-scroll::-webkit-scrollbar-thumb:hover { background: #5c4f3d; }
+        .nice-scroll::-webkit-scrollbar-thumb { background: #c2c2c2; border-radius: 9999px; }
+        .nice-scroll::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
-<body class="bg-app text-stone-200 min-h-screen flex flex-col antialiased selection:bg-amber-500/30 selection:text-amber-50">
+<body class="bg-app text-stone-800 min-h-screen flex flex-col antialiased selection:bg-stone-300 selection:text-stone-900">
 
-    <header class="w-full border-b border-line">
-        <div class="max-w-3xl mx-auto flex items-center justify-between px-5 py-5">
+    <header class="w-full border-b border-line bg-panel">
+        <div class="max-w-[1400px] mx-auto flex items-center justify-between px-4 sm:px-6 py-4">
             <div class="flex items-center gap-2.5">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
+                <div class="flex h-8 w-8 items-center justify-center rounded-md bg-stone-900 text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
                     </svg>
                 </div>
-                <span class="text-lg font-semibold tracking-tight text-stone-100">GoBox</span>
+                <span class="text-lg font-semibold tracking-tight text-stone-900">GoBox</span>
             </div>
-            <span class="text-sm text-stone-400">Your photos &amp; videos</span>
+            <span class="text-sm text-stone-500">My file storage system</span>
         </div>
     </header>
 
-    <main class="flex-grow w-full max-w-3xl mx-auto px-5 py-10 space-y-8">
+    <main class="flex-grow w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-5 lg:gap-8 items-start">
 
-        <section>
-            <h1 class="text-2xl font-semibold tracking-tight text-stone-100">Upload</h1>
-            <p class="mt-1 text-sm text-stone-400">Add photos and videos to your library. Big files are fine.</p>
+            <!-- LEFT: compact controls (upload + new folder) -->
+            <aside class="space-y-3 lg:sticky lg:top-6">
+                <form hx-post="/upload?path={{.URLPath}}"
+                      hx-target="#file-list"
+                      hx-swap="afterbegin"
+                      enctype="multipart/form-data"
+                      class="space-y-2">
 
-            <form hx-post="/upload?path={{.URLPath}}"
-                  hx-target="#file-list"
-                  hx-swap="afterbegin"
-                  enctype="multipart/form-data"
-                  class="mt-5 space-y-4">
-
-                <div class="relative group rounded-2xl border-2 border-dashed border-line bg-panel/60 p-10 transition-colors hover:border-amber-500/40 hover:bg-panel">
-                    <input type="file" name="file" required id="file-input" multiple
-                           class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
-
-                    <div class="flex flex-col items-center justify-center text-center gap-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-400 transition-transform group-hover:scale-105">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-6 w-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 7.5 12 3m0 0L7.5 7.5M12 3v13.5" />
-                            </svg>
+                    <div class="relative rounded-md border border-dashed border-line bg-panel p-4 transition-colors hover:border-stone-400">
+                        <input type="file" name="file" required id="file-input" multiple
+                               class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
+                        <div class="flex flex-col gap-1 text-left">
+                            <span class="text-sm font-medium text-stone-700">Add files</span>
+                            <span class="text-xs text-stone-500" id="file-name-display">Choose or drop photos &amp; videos</span>
                         </div>
-                        <p class="text-base font-medium text-stone-200">Drop photos &amp; videos here</p>
-                        <p class="text-sm text-stone-500" id="file-name-display">or click to browse your device</p>
                     </div>
-                </div>
 
-                <button type="submit"
-                        class="w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:ring-offset-2 focus:ring-offset-[#16130f]">
-                    Upload
-                </button>
-            </form>
-        </section>
+                    <button type="submit"
+                            class="w-full rounded-md bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-stone-700 focus:outline-none focus:ring-2 focus:ring-stone-400">
+                        Upload
+                    </button>
+                </form>
 
-        <section>
-            <div class="flex items-center justify-between gap-3 border-b border-line pb-3">
-                <nav class="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-stone-400">
-                    {{range $i, $c := .Crumbs}}
-                        {{if $i}}<span class="text-stone-600">/</span>{{end}}
-                        <a href="/?path={{$c.URLPath}}" class="truncate hover:text-amber-400">{{$c.Name}}</a>
-                    {{end}}
-                </nav>
                 <button hx-post="/mkdir?path={{.URLPath}}"
                         hx-prompt="New folder name:"
-                        class="shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-amber-500/40 hover:text-amber-400">New folder</button>
-            </div>
+                        class="w-full rounded-md border border-line bg-panel px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100">New folder</button>
+            </aside>
 
-            <ul id="file-list" class="mt-4 space-y-2 max-h-[420px] overflow-y-auto pr-1 nice-scroll">
-                {{range .Folders}}
-                <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-                    <a href="/?path={{.URLPath}}" class="flex min-w-0 items-center gap-2 font-medium text-amber-300 hover:text-amber-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
-                        <span class="truncate">{{.Name}}</span>
-                    </a>
-                    <div class="ml-4 flex shrink-0 items-center gap-3">
-                        <button hx-post="/rename/{{.URLPath}}"
-                                hx-prompt="New name for {{.Name}}:"
-                                hx-target="closest li"
-                                hx-swap="outerHTML"
-                                class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
-                        <button hx-delete="/folder/{{.URLPath}}"
-                                hx-target="closest li"
-                                hx-swap="outerHTML"
-                                hx-confirm="Delete folder {{.Name}} and everything inside it?"
-                                class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
-                    </div>
-                </li>
-                {{end}}
-                {{range .Files}}
-                <li class="entry-row flex items-center justify-between rounded-xl border border-line bg-panel px-4 py-3">
-                    <a href="/files/{{.URLPath}}" target="_blank" class="truncate font-medium text-stone-200 hover:text-amber-400">{{.Name}}</a>
-                    <div class="ml-4 flex shrink-0 items-center gap-3">
-                        <span class="text-xs text-stone-500">{{.SizeKB}} KB</span>
-                        <a href="/files/{{.URLPath}}?download=1" class="text-xs font-medium text-green-400 hover:text-lime-300">Download</a>
-                        <button hx-post="/move/{{.URLPath}}"
-                                hx-prompt="Move to folder (e.g. photos/2024):"
-                                hx-target="closest li"
-                                hx-swap="outerHTML"
-                                class="text-xs font-medium text-stone-500 hover:text-sky-400">Move</button>
-                        <button hx-post="/rename/{{.URLPath}}"
-                                hx-prompt="New name for {{.Name}}:"
-                                hx-target="closest li"
-                                hx-swap="outerHTML"
-                                class="text-xs font-medium text-stone-500 hover:text-amber-400">Rename</button>
-                        <button hx-delete="/files/{{.URLPath}}"
-                                hx-target="closest li"
-                                hx-swap="outerHTML"
-                                hx-confirm="Delete {{.Name}}?"
-                                class="text-xs font-medium text-stone-500 hover:text-red-400">Delete</button>
-                    </div>
-                </li>
-                {{end}}
-                {{if and (not .Folders) (not .Files)}}
-                <li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">
-                    This folder is empty — upload a file or create a folder above.
-                </li>
-                {{end}}
-            </ul>
-        </section>
+            <!-- RIGHT: the files listing is the star -->
+            <section class="min-w-0">
+                <nav class="flex min-w-0 flex-wrap items-center gap-1.5 pb-2 text-sm text-stone-500">
+                    {{range $i, $c := .Crumbs}}
+                        {{if $i}}<span class="text-stone-400">/</span>{{end}}
+                        <a href="/?path={{$c.URLPath}}" class="truncate hover:text-stone-900">{{$c.Name}}</a>
+                    {{end}}
+                </nav>
 
+                <div class="rounded-md border border-line bg-panel overflow-hidden">
+                    <ul id="file-list" class="max-h-[calc(100vh-200px)] overflow-y-auto nice-scroll">
+                        {{range .Folders}}
+                        <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
+                            <a href="/?path={{.URLPath}}" class="flex min-w-0 items-center gap-2 font-medium text-stone-800 hover:text-stone-950">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 shrink-0 text-stone-500"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3.379a1.5 1.5 0 0 1 1.06.44l1.122 1.121a1.5 1.5 0 0 0 1.06.439H18A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5V6Z" /></svg>
+                                <span class="truncate">{{.Name}}</span>
+                            </a>
+                            <div class="ml-4 flex shrink-0 items-center gap-3">
+                                <button hx-post="/rename/{{.URLPath}}"
+                                        hx-prompt="New name for {{.Name}}:"
+                                        hx-target="closest li"
+                                        hx-swap="outerHTML"
+                                        class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
+                                <button hx-delete="/folder/{{.URLPath}}"
+                                        hx-target="closest li"
+                                        hx-swap="outerHTML"
+                                        hx-confirm="Delete folder {{.Name}} and everything inside it?"
+                                        class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+                            </div>
+                        </li>
+                        {{end}}
+                        {{range .Files}}
+                        <li class="entry-row flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 hover:bg-stone-50">
+                            <a href="/files/{{.URLPath}}" target="_blank" class="truncate font-medium text-stone-800 hover:text-stone-950">{{.Name}}</a>
+                            <div class="ml-4 flex shrink-0 items-center gap-3">
+                                <span class="text-xs text-stone-500">{{.SizeKB}} KB</span>
+                                <a href="/files/{{.URLPath}}?download=1" class="text-xs font-medium text-green-600 hover:text-green-700">Download</a>
+                                <button hx-post="/move/{{.URLPath}}"
+                                        hx-prompt="Move to folder (e.g. photos/2024):"
+                                        hx-target="closest li"
+                                        hx-swap="outerHTML"
+                                        class="text-xs font-medium text-stone-500 hover:text-sky-600">Move</button>
+                                <button hx-post="/rename/{{.URLPath}}"
+                                        hx-prompt="New name for {{.Name}}:"
+                                        hx-target="closest li"
+                                        hx-swap="outerHTML"
+                                        class="text-xs font-medium text-stone-500 hover:text-stone-900">Rename</button>
+                                <button hx-delete="/files/{{.URLPath}}"
+                                        hx-target="closest li"
+                                        hx-swap="outerHTML"
+                                        hx-confirm="Delete {{.Name}}?"
+                                        class="text-xs font-medium text-stone-500 hover:text-red-600">Delete</button>
+                            </div>
+                        </li>
+                        {{end}}
+                        {{if and (not .Folders) (not .Files)}}
+                        <li id="empty-state" class="px-4 py-12 text-center text-sm text-stone-500">
+                            Folder is empty
+                        </li>
+                        {{end}}
+                    </ul>
+                </div>
+            </section>
+
+        </div>
     </main>
 
-    <footer class="w-full border-t border-line">
-        <p class="mx-auto max-w-3xl px-5 py-5 text-center text-xs text-stone-600">GoBox — running on your Raspberry Pi at home.</p>
+    <footer class="w-full border-t border-line bg-panel">
+        <p class="mx-auto max-w-[1400px] px-4 sm:px-6 py-4 text-center text-xs text-stone-500">GoBox, running on my pi at home!</p>
     </footer>
 
     <script>
@@ -148,7 +144,7 @@
             const files = e.target.files;
             const display = document.getElementById('file-name-display');
             if (!files || files.length === 0) {
-                display.textContent = "or click to browse your device";
+                display.textContent = "Choose or drop files";
             } else if (files.length === 1) {
                 display.textContent = files[0].name;
             } else {
@@ -166,7 +162,7 @@
             if (hasItems && empty) {
                 empty.remove();
             } else if (!hasItems && !empty) {
-                list.insertAdjacentHTML('beforeend', '<li id="empty-state" class="rounded-xl border border-dashed border-line bg-panel/40 px-4 py-10 text-center text-sm text-stone-500">This folder is empty — upload a file or create a folder above.</li>');
+                list.insertAdjacentHTML('beforeend', '<li id="empty-state" class="px-4 py-12 text-center text-sm text-stone-500">Folder is empty</li>');
             }
         }
 
@@ -176,7 +172,7 @@
             // an upload swaps new rows into the list; reset the form afterwards
             if (evt.detail.target.id === 'file-list') {
                 document.querySelector('form').reset();
-                document.getElementById('file-name-display').textContent = "or click to browse your device";
+                document.getElementById('file-name-display').textContent = "Choose or drop files";
             }
 
             // rows may have been added (upload) or removed (delete/move), so

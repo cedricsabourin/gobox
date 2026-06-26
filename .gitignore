@@ -7,5 +7,6 @@ main
 *.dylib
 
 .vscode/
+.cursor/
 .DS_Store
 Thumbs.db
